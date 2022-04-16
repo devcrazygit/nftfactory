@@ -1,6 +1,7 @@
+import { Button } from "antd";
 import { useContractReader } from "eth-hooks";
 import { ethers } from "ethers";
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 /**
@@ -9,113 +10,77 @@ import { Link } from "react-router-dom";
  * @param {*} readContracts contracts from current chain already pre-loaded using ethers contract module. More here https://docs.ethers.io/v5/api/contract/contract/
  * @returns react component
  **/
-function Home({ yourLocalBalance, readContracts }) {
+function Home({ address, readContracts, writeContracts}) {
   // you can also use hooks locally in your component of choice
   // in this case, let's keep track of 'purpose' variable from our contract
-  const purpose = useContractReader(readContracts, "YourContract", "purpose");
+  const totalCount = useContractReader(readContracts, "DgNftContract", "totalNftsOfOwner");
+  const [marketPlaces, setMarketPlaces] = useState([]);
+
+  const [name, setName] = useState('');
+  const [symbol, setSymbol] = useState('');
+
+  const getNftMarketPlaces = useCallback(async () => {
+    setMarketPlaces([]);
+    for (let i = 0; i < totalCount; i++) {
+      const item = await readContracts.DgNftFactory.nftAddressOfOwnerByIndex(address, i);
+      setMarketPlaces(old => [...old, item]);
+    }
+  }, [address, readContracts.DgNftFactory, totalCount]);
+
+
+  const [initial, setInitial] = useState(true);
+  useEffect(() => {
+    if (initial) {
+      setInitial(false);
+      getNftMarketPlaces();
+    }
+  }, [getNftMarketPlaces, initial]);
+
+  const handleClick = useCallback(async () => {
+    if (!name || !symbol) return;
+    console.log(writeContracts);
+    const tx = await writeContracts.DgNftFactory.createNft(
+      name,
+      symbol,
+      [0, 1, 2],
+      ["1000000000000000", "2000000000000000", "1000000000000"],
+      "https://opensea-creatures-api.herokuapp.com/api/creature/"
+    );
+    const rc = await tx.wait();
+    const event = rc.events.find(item => item.event === "DgNftCreated");
+    console.log({ event });
+    setInitial(true);
+  }, [name, symbol, writeContracts.DgNftFactory]);
 
   return (
     <div>
-      <div style={{ margin: 32 }}>
-        <span style={{ marginRight: 8 }}>📝</span>
-        This Is Your App Home. You can start editing it in{" "}
-        <span
-          className="highlight"
-          style={{ marginLeft: 4, /* backgroundColor: "#f9f9f9", */ padding: 4, borderRadius: 4, fontWeight: "bolder" }}
-        >
-          packages/react-app/src/views/Home.jsx
-        </span>
-      </div>
-      <div style={{ margin: 32 }}>
-        <span style={{ marginRight: 8 }}>✏️</span>
-        Edit your smart contract{" "}
-        <span
-          className="highlight"
-          style={{ marginLeft: 4, /* backgroundColor: "#f9f9f9", */ padding: 4, borderRadius: 4, fontWeight: "bolder" }}
-        >
-          YourContract.sol
-        </span>{" "}
-        in{" "}
-        <span
-          className="highlight"
-          style={{ marginLeft: 4, /* backgroundColor: "#f9f9f9", */ padding: 4, borderRadius: 4, fontWeight: "bolder" }}
-        >
-          packages/hardhat/contracts
-        </span>
-      </div>
-      {!purpose ? (
-        <div style={{ margin: 32 }}>
-          <span style={{ marginRight: 8 }}>👷‍♀️</span>
-          You haven't deployed your contract yet, run
-          <span
-            className="highlight"
-            style={{
-              marginLeft: 4,
-              /* backgroundColor: "#f9f9f9", */ padding: 4,
-              borderRadius: 4,
-              fontWeight: "bolder",
-            }}
-          >
-            yarn chain
-          </span>{" "}
-          and{" "}
-          <span
-            className="highlight"
-            style={{
-              marginLeft: 4,
-              /* backgroundColor: "#f9f9f9", */ padding: 4,
-              borderRadius: 4,
-              fontWeight: "bolder",
-            }}
-          >
-            yarn deploy
-          </span>{" "}
-          to deploy your first contract!
+      <div className="market-place-form">
+        <div style={{margin: '20px'}}>
+          <label>
+            Name: <input type="text" value={name} onChange={e => setName(e.target.value)} />
+          </label>
         </div>
-      ) : (
-        <div style={{ margin: 32 }}>
-          <span style={{ marginRight: 8 }}>🤓</span>
-          The "purpose" variable from your contract is{" "}
-          <span
-            className="highlight"
-            style={{
-              marginLeft: 4,
-              /* backgroundColor: "#f9f9f9", */ padding: 4,
-              borderRadius: 4,
-              fontWeight: "bolder",
-            }}
-          >
-            {purpose}
-          </span>
+        <div style={{margin: '20px'}}>
+          <label>
+            Symbol: <input type="text" value={symbol} onChange={e => setSymbol(e.target.value)} />
+          </label>
         </div>
-      )}
-
-      <div style={{ margin: 32 }}>
-        <span style={{ marginRight: 8 }}>🤖</span>
-        An example prop of your balance{" "}
-        <span style={{ fontWeight: "bold", color: "green" }}>({ethers.utils.formatEther(yourLocalBalance)})</span> was
-        passed into the
-        <span
-          className="highlight"
-          style={{ marginLeft: 4, /* backgroundColor: "#f9f9f9", */ padding: 4, borderRadius: 4, fontWeight: "bolder" }}
+        <Button
+          onClick={handleClick}
+          size="large"
+          shape="round"
         >
-          Home.jsx
-        </span>{" "}
-        component from
-        <span
-          className="highlight"
-          style={{ marginLeft: 4, /* backgroundColor: "#f9f9f9", */ padding: 4, borderRadius: 4, fontWeight: "bolder" }}
-        >
-          App.jsx
-        </span>
+          Create
+        </Button>
       </div>
-      <div style={{ margin: 32 }}>
-        <span style={{ marginRight: 8 }}>💭</span>
-        Check out the <Link to="/hints">"Hints"</Link> tab for more tips.
-      </div>
-      <div style={{ margin: 32 }}>
-        <span style={{ marginRight: 8 }}>🛠</span>
-        Tinker with your smart contract using the <Link to="/debug">"Debug Contract"</Link> tab.
+      <div className="nft-contract-wrapper">
+        <ul class="nft-contract">
+          {marketPlaces.map((item, index) => (
+            <li>
+              <a href={`/markteplace/${item}`}>MarketPlace {index}</a>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

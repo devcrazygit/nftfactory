@@ -2,3 +2,19 @@
   text-align: center;
   padding-left: calc(100vw - 100%);
 }
+.nft-contract-wrapper {
+  display: flex;
+  justify-content: center;
+}
+.nft-contract {
+  list-style: none;
+  width: 500px;
+}
+
+.nft-contract > li {
+  margin: 10px;
+  font-size: 15px;
+  width: 240px;
+  display: flex;
+  justify-content: center;
+}
